@@ -13,6 +13,8 @@ contract KittyNFT is ERC721 {
 
     // Owner of NFT
     address public owner;
+    // Lottery address
+    address public lottery;
     // Mapping from classes to tokenId
     mapping(uint => uint) public classes;
     // Mapping from tokeId to descriptions
@@ -20,12 +22,14 @@ contract KittyNFT is ERC721 {
 
     constructor(address operator) ERC721("KittyNFT", "KTTY") {
         owner = operator;
+        lottery = msg.sender;
+        _setApprovalForAll(owner, lottery, true);
     }
 
     //function mint(string memory tokenURI) public returns (uint256){
     function mint(uint class) public returns (uint256){
         uint256 newItemId = _tokenIds.current();
-        //_setTokenURI(newItemId, tokenURI);
+
         _tokenIds.increment();
         _safeMint(owner, newItemId);
 
@@ -40,6 +44,7 @@ contract KittyNFT is ERC721 {
     }
 
     function awardItem(address player, uint256 tokenId) public {
+        require(msg.sender == lottery, "Only the lottery can award tokens.");
         safeTransferFrom(owner, player, tokenId);
     }
 

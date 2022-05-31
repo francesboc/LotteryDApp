@@ -8,9 +8,10 @@ import "./KittyNFT.sol";
  * @dev A lottory of NFT
  */
 
+// A representation of a ticket in lottery
 struct Ticket{
     address buyer;
-    uint[] numbers;
+    uint[6] numbers;
     uint matches;
     uint powerballNum;
     bool powerballMatch;
@@ -19,36 +20,39 @@ struct Ticket{
 
 contract Try {
 
-    uint public constant M = 100;
+    // Fixed round duration
+    uint public M;
     uint public constant ticketPrice = 1 gwei;
+    // K parameter chosen by operator
     uint public K;
     uint public blockNumber;
+    // End of a round
     uint public roundDuration;
     // The drawn numbers 
-    uint[] public winningNumbers;
+    uint[6] public winningNumbers;
 
     bool public isContractActive;
     bool public isRoundActive;
     bool public isPrizeGiven;
 
     address public owner;
-    
-    // Associate tokenID with NFT
-    mapping (uint => KittyNFT) collectibles;
 
     KittyNFT nft;
     Ticket[] public tickets; 
 
-    event TicketBought();
+    event TicketBought(string result, address _addr, uint[6] _numbers);
+    event NFTWin(address _addr, uint _class);
+    event ToLog(string str);
+    event NewWinningNumber(uint number);
 
-    constructor(uint _K) {
+    constructor(uint _M, uint _K) {
+        M = _M;
         K = _K;
         isRoundActive = false;
         isContractActive = true;
         isPrizeGiven = true;
         owner = msg.sender;
         uint i=0;
-        //uint tokenId;
         nft = new KittyNFT(owner);
         // Generation of first eight NFT
         for (i=0; i<8; i++)
@@ -67,17 +71,20 @@ contract Try {
         isPrizeGiven = false;
         blockNumber = block.number;
         roundDuration = blockNumber + M;
+        string memory log = string(abi.encodePacked("A new round has started. Current block:", Strings.toString(blockNumber), 
+            " Final block:", Strings.toString(roundDuration)));
+        emit ToLog(log);
     }
 
     /**
-     * @dev Let user buy a ticket
-     * @param numbers the numbers picked by the user
-     * @return True in case of successful purchase, False o.w
+     * @dev Let users buy a ticket
+     * @param numbers: the numbers picked by the user
+     * @return bool: True in case of successful purchase, False o.w
      */
-    function buy(uint[] memory numbers) public payable returns(bool) {
+    function buy(uint[6] memory numbers) public payable returns(bool) {
         require(isContractActive,"Lottery is closed.");
         require(isRoundActive, "Round is closed. Try later.");
-        require(block.number < roundDuration, "You can buy a ticket when a new round starts.");
+        require(block.number <= roundDuration, "You can buy a ticket when a new round starts.");
         require(msg.value >= ticketPrice, "1 gwei is required to buy a ticket.");
         uint numebrsLen = numbers.length;
         require(numebrsLen == 6, "You have to pick 5 numbers and a powerball number");
@@ -90,42 +97,34 @@ contract Try {
             if(i != 5){
                 require(numbers[i] >= 1 && numbers[i] <= 69);
                 require(!picked[numbers[i]-1], "Ticket numbers cannot be duplicated");
-                // require(isNumberNotAlreadyPicked(numbers[i], numbers,numbers.length, i),"Ticket numbers cannot be duplicated");
                 picked[numbers[i]-1] = true;
             }
             else
-                require(numbers[i] >= 1 && numbers[i] <= 26);
+                require(numbers[i] >= 1 && numbers[i] <= 26, "Powerball number must be in range [1,26]");
         }
         // Ticket can be bought, All checks passed
         tickets.push(Ticket(msg.sender, numbers, 0, numbers[5], false,false));
 
-        emit TicketBought();
+        emit TicketBought("Ticket successfully purchased", msg.sender, numbers);
         uint change = msg.value - 1 gwei;
-        if( change != 0)
+        if( change != 0){
             payable(msg.sender).transfer(change);
+            emit ToLog("Change issued");
+        }
         return true;
     }
 
-    // function isNumberNotAlreadyPicked(uint num, 
-    //     uint[] memory numbers,
-    //     uint len, 
-    //     uint index) private pure returns (bool){
-    //     uint i;
-    //     for (i=0; i<len; i++){
-    //         if(i != index){
-    //             if(numbers[i] == num)
-    //                 return false;
-    //         }
-    //     }
-    //     return true;
-    // } 
-
-    function drawNumbers() public returns(uint[] memory){
+    /**
+     * @dev Pick random numbers as winning numbers for this round.
+            Then it assign the rewards to winning users, if any.
+     * @return bool: True in case of successful purchase, False o.w
+     */
+    function drawNumbers() public returns(bool){
         require(isContractActive,"Lottery is closed.");
         require(msg.sender==owner, "Only the owner can draw numbers.");
         // Considering that a block is mined every 12 seconds on average, 
         // waiting other 25 means waiting other 5 minutes to draw numebrs.
-        require(block.number >= roundDuration + 25, "Too early to draw numbers");
+        require(block.number >= roundDuration + K + 25, "Too early to draw numbers");
         require(!isPrizeGiven, "Already drawn winning numbers.");
         isRoundActive = false;
         uint i;
@@ -133,43 +132,52 @@ contract Try {
         for (i=0; i<69; i++)
             picked[i] = false; 
         uint extractedNumber;
-        bytes32 bhash = blockhash(roundDuration + K);
+        bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, roundDuration + K));
         bytes memory bytesArray = new bytes(32);
-        for (i=0; i <32; i++){
-            bytesArray[i] =bhash[i];
-        }
-        bytes32 rand=keccak256(bytesArray);
-
-        for (i=0; i<5; i++){
+        bytes32 rand;
+        for (uint j=0; j<5; j++){
+            for (i=0; i <32; i++)
+                bytesArray[i] = bhash[i];
+            rand = keccak256(bytesArray);
+            // generate random
             extractedNumber = (uint(rand) % 69) + 1;
-            if(!picked[extractedNumber]){
+            if(!picked[extractedNumber-1]){
                 // Not already extracted, this is a winning number
-                winningNumbers[i] = extractedNumber;
-                picked[extractedNumber] = true;
+                winningNumbers[j] = extractedNumber;
+                picked[extractedNumber-1] = true;
+                emit NewWinningNumber(extractedNumber);
             }
-            else
+            else{
                 // number already extracted. Retry.
-                i -= 1;
+                j -= 1;
+            }
+            bhash = bhash ^ rand;
         }
         // Gold number
         winningNumbers[5] = (uint(rand) % 26) + 1;
+        emit ToLog("Winning numbers extracted");
         // Give the awards to users
         givePrizes();
-        return winningNumbers;
+        
+        return true;
     }   
 
-    function givePrizes() public {
+    /**
+     * @dev Assign prizes to users.
+     */
+    function givePrizes() public payable {
         require(isContractActive,"Lottery is closed.");
         require(msg.sender==owner, "Only the owner can draw numbers.");
-        require(isPrizeGiven, "Already given prizes.");
+        require(!isRoundActive, "Round still in progress.");
+        require(!isPrizeGiven, "Already given prizes.");
         uint powerBall = winningNumbers[5];
-        uint[] memory userNumbers;
+        uint[6] memory userNumbers;
         uint i;
         // select winners
         for(i=0; i < tickets.length; i++){
             userNumbers = tickets[i].numbers;
-            for (uint j=0; j < winningNumbers.length; i++){
-                for(uint k=0; k < userNumbers.length; k++){
+            for (uint j=0; j < 5; j++){
+                for(uint k=0; k < 5; k++){
                     if(userNumbers[k] == winningNumbers[j]){
                         tickets[i].matches += 1;
                         tickets[i].isWinning = true;
@@ -203,6 +211,7 @@ contract Try {
                 if (tickets[i].powerballMatch)
                     winNFTClass-=1;
                 // here we have to assign NFT to the address
+                emit NFTWin(tickets[i].buyer, winNFTClass);
                 uint tokenId = nft.getTokenFromClass(winNFTClass);
                 nft.awardItem(tickets[i].buyer, tokenId);
                 mint(winNFTClass);
@@ -215,12 +224,21 @@ contract Try {
         delete tickets;
     }
 
+    /**
+     * @dev Used to mint a new NFT of a specific class
+     * @param _class: NFT's class to be mined
+     */
     function mint(uint _class) public {
         require(isContractActive,"Lottery is closed.");
-        // It mint new collectibles
         nft.mint(_class);
+        string memory log = string(abi.encodePacked("Minted new NFT of class ", Strings.toString(_class)));
+        emit ToLog(log);
     }
     
+    /**
+     * @dev Close the lottery, deactivating the contract.
+            If a round is active, it refund users.
+     */
     function closeLottery() public payable {
         require(isContractActive,"Lottery is already closed.");
         require(msg.sender==owner, "Only the owner can close the lottery.");
@@ -234,6 +252,7 @@ contract Try {
                 userAddress.transfer(ticketPrice);
             }
         }
-        
+
+        emit ToLog("Lottery closed");
     }
 }
