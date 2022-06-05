@@ -20,9 +20,10 @@ struct Ticket{
 
 contract Try {
 
-    // Fixed round duration
+    // Round duration
     uint public M;
-    uint public constant ticketPrice = 1 gwei;
+    // Fixed ticket price
+    uint public constant ticketPrice = 10 gwei;
     // K parameter chosen by operator
     uint public K;
     uint public blockNumber;
@@ -31,19 +32,25 @@ contract Try {
     // The drawn numbers 
     uint[6] public winningNumbers;
 
+    // Tells if the contract is active
     bool public isContractActive;
+    // Tells if a round is active
     bool public isRoundActive;
+    // Tells if prizes are already given
     bool public isPrizeGiven;
 
     address public owner;
 
     KittyNFT nft;
     Ticket[] public tickets; 
-
+ 
     event TicketBought(string result, address _addr, uint[6] _numbers);
-    event NFTWin(address _addr, uint _class);
+    event NFTWin(string str, address _addr, uint _class);
     event ToLog(string str);
     event NewWinningNumber(uint number);
+    event NewRound(string str, uint _start, uint _end);
+    event ChangeBack(string str, uint _change);
+    event NFTMint(string str, uint _class);
 
     constructor(uint _M, uint _K) {
         M = _M;
@@ -71,9 +78,7 @@ contract Try {
         isPrizeGiven = false;
         blockNumber = block.number;
         roundDuration = blockNumber + M;
-        string memory log = string(abi.encodePacked("A new round has started. Current block:", Strings.toString(blockNumber), 
-            " Final block:", Strings.toString(roundDuration)));
-        emit ToLog(log);
+        emit NewRound("A new round has started.", blockNumber, roundDuration);
     }
 
     /**
@@ -82,10 +87,10 @@ contract Try {
      * @return bool: True in case of successful purchase, False o.w
      */
     function buy(uint[6] memory numbers) public payable returns(bool) {
-        require(isContractActive,"Lottery is closed.");
+        require(isContractActive,"Lottery is closed."); // 853
         require(isRoundActive, "Round is closed. Try later.");
         require(block.number <= roundDuration, "You can buy a ticket when a new round starts.");
-        require(msg.value >= ticketPrice, "1 gwei is required to buy a ticket.");
+        require(msg.value >= ticketPrice, "10 gwei are required to buy a ticket.");
         uint numebrsLen = numbers.length;
         require(numebrsLen == 6, "You have to pick 5 numbers and a powerball number");
         uint i;
@@ -105,11 +110,11 @@ contract Try {
         // Ticket can be bought, All checks passed
         tickets.push(Ticket(msg.sender, numbers, 0, numbers[5], false,false));
 
-        emit TicketBought("Ticket successfully purchased", msg.sender, numbers);
-        uint change = msg.value - 1 gwei;
-        if( change != 0){
+        emit TicketBought("Ticket successfully purchased ", msg.sender, numbers);
+        uint change = msg.value - ticketPrice; // 72
+        if( change > 0){
             payable(msg.sender).transfer(change);
-            emit ToLog("Change issued");
+            emit ChangeBack("Change issued", change);
         }
         return true;
     }
@@ -122,9 +127,7 @@ contract Try {
     function drawNumbers() public returns(bool){
         require(isContractActive,"Lottery is closed.");
         require(msg.sender==owner, "Only the owner can draw numbers.");
-        // Considering that a block is mined every 12 seconds on average, 
-        // waiting other 25 means waiting other 5 minutes to draw numebrs.
-        require(block.number >= roundDuration + K + 25, "Too early to draw numbers");
+        require(block.number >= roundDuration + K, "Too early to draw numbers");
         require(!isPrizeGiven, "Already drawn winning numbers.");
         isRoundActive = false;
         uint i;
@@ -132,7 +135,8 @@ contract Try {
         for (i=0; i<69; i++)
             picked[i] = false; 
         uint extractedNumber;
-        bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, roundDuration + K));
+        // bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, blockhash(roundDuration+K)));
+        bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, roundDuration + K)); // replacement for testing
         bytes memory bytesArray = new bytes(32);
         bytes32 rand;
         for (uint j=0; j<5; j++){
@@ -151,10 +155,11 @@ contract Try {
                 // number already extracted. Retry.
                 j -= 1;
             }
-            bhash = bhash ^ rand;
+            bhash = bhash ^ rand; // xor to generate another random value
         }
         // Gold number
         winningNumbers[5] = (uint(rand) % 26) + 1;
+        emit NewWinningNumber(winningNumbers[5]);
         emit ToLog("Winning numbers extracted");
         // Give the awards to users
         givePrizes();
@@ -165,7 +170,7 @@ contract Try {
     /**
      * @dev Assign prizes to users.
      */
-    function givePrizes() public payable {
+    function givePrizes() public {
         require(isContractActive,"Lottery is closed.");
         require(msg.sender==owner, "Only the owner can draw numbers.");
         require(!isRoundActive, "Round still in progress.");
@@ -211,16 +216,17 @@ contract Try {
                 if (tickets[i].powerballMatch)
                     winNFTClass-=1;
                 // here we have to assign NFT to the address
-                emit NFTWin(tickets[i].buyer, winNFTClass);
+                emit NFTWin("NFT Win!",tickets[i].buyer, winNFTClass);
                 uint tokenId = nft.getTokenFromClass(winNFTClass);
                 nft.awardItem(tickets[i].buyer, tokenId);
                 mint(winNFTClass);
             }
         }
         isPrizeGiven = true;
-
+        // Pay lottery operator with the contract's balance
         payable(owner).transfer(address(this).balance);
-
+        emit ToLog("Operator refunded");
+        // Clean the tickets of this round
         delete tickets;
     }
 
@@ -230,9 +236,9 @@ contract Try {
      */
     function mint(uint _class) public {
         require(isContractActive,"Lottery is closed.");
+        require(msg.sender==owner, "Only the owner can mint NFT.");
         nft.mint(_class);
-        string memory log = string(abi.encodePacked("Minted new NFT of class ", Strings.toString(_class)));
-        emit ToLog(log);
+        emit NFTMint("New NFT minted", _class);
     }
     
     /**
@@ -251,8 +257,10 @@ contract Try {
                 userAddress = payable(tickets[i].buyer);
                 userAddress.transfer(ticketPrice);
             }
+            emit ToLog("Users refunded");
         }
 
         emit ToLog("Lottery closed");
     }
+
 }

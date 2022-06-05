@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { should } = require("chai");
 const { assert } = require("chai");
 
+// Used to generate random numbers in tickets
 function generateRandom(){
     let rand = [];
 
@@ -29,6 +30,7 @@ describe("Lottery test", function(){
         let failReason = null;
         let _k = 1 // K parameter
         let _m = 5 // round duration 
+        let ticketPrice = 10
         contract = contract.deploy({
             data: metadata.data.bytecode.object,
             arguments: [_m,_k] 
@@ -41,6 +43,7 @@ describe("Lottery test", function(){
             gasPrice: '30000000000'
         })
         
+        // Checking contract's initial values
         let isRoundActive =  await try_contract.methods.isRoundActive().call()
         let isPrizeGiven = await try_contract.methods.isPrizeGiven().call()
 
@@ -67,7 +70,7 @@ describe("Lottery test", function(){
                     from: accounts[Math.floor((Math.random() * 10)+1)],
                     gas: 15000000000,
                     gasPrice: '30000000000',
-                    value: web3.utils.toWei("1", "gwei")
+                    value: web3.utils.toWei("10", "gwei")
                 })
                 buyer.push(result.events.TicketBought.returnValues._addr)
                 buyersNumbers.push(result.events.TicketBought.returnValues._numbers)
@@ -81,16 +84,16 @@ describe("Lottery test", function(){
             console.log(buyer[i] + " " + buyersNumbers[i])
         }
         
-        console.log("Inserting " + String(_k+25) + " faulty transaction to let block number go ahead")
+        console.log("Inserting " + String(_k) + " faulty transaction to let block number go ahead")
         
         // inserting some faulty transaction to let block number go ahead
-        for (let i = 0; i < _k+25; i++) {
+        for (let i = 0; i < _k; i++) {
             try{
                 await try_contract.methods.buy([1,2,3,4,5,6]).send({
                     from: accounts[1],
                     gas: 15000000000,
                     gasPrice: '30000000000',
-                    value: web3.utils.toWei("1", "gwei")
+                    value: web3.utils.toWei("10", "gwei")
                 })
             } catch(e){}
         }
