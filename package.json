@@ -1,5 +1,29 @@
 {
   "dependencies": {
-    "@openzeppelin/contracts": "^4.6.0"
-  }
+    "@openzeppelin/contracts": "^4.6.0",
+    "@truffle/contract": "^4.5.14",
+    "lite-server": "^2.6.1",
+    "web3": "^1.7.3"
+  },
+  "name": "lotterydapp",
+  "description": "",
+  "version": "1.0.0",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "lite-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/francesboc/LotteryDApp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/francesboc/LotteryDApp/issues"
+  },
+  "homepage": "https://github.com/francesboc/LotteryDApp#readme"
 }
