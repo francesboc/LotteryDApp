@@ -1,15 +1,15 @@
  .u-section-1 {
-  background-image: linear-gradient(0deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("images/cryptokitties-1.jpg");
-  background-position: 50% 50%;
+  background-image: linear-gradient(0deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("images/cryptokitties_back1.png");
+  background-position: 50% 76.88%;
 }
 
 .u-section-1 .u-sheet-1 {
-  min-height: 500px;
+  min-height: 502px;
 }
 
 .u-section-1 .u-text-1 {
   font-size: 3.75rem;
-  margin: 60px auto 0 0;
+  margin: 106px auto 0 0;
 }
 
 .u-section-1 .u-line-1 {
@@ -36,25 +36,19 @@
 
 @media (max-width: 1199px) {
   .u-section-1 .u-sheet-1 {
-    min-height: 412px;
-  }
-}
-
-@media (max-width: 991px) {
-  .u-section-1 .u-sheet-1 {
-    min-height: 316px;
+    min-height: 503px;
   }
 }
 
 @media (max-width: 767px) {
   .u-section-1 .u-sheet-1 {
-    min-height: 237px;
+    min-height: 490px;
   }
 }
 
 @media (max-width: 575px) {
   .u-section-1 .u-sheet-1 {
-    min-height: 149px;
+    min-height: 340px;
   }
 
   .u-section-1 .u-text-1 {
@@ -243,6 +237,7 @@
   left: 10px;
   width: 40px;
   height: 40px;
+  top: 168px;
 }
 
 .u-section-3 .u-gallery-nav-2 {

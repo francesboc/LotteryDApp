@@ -37,74 +37,44 @@ App = {
     initContract: function() { 
         /* Upload the contract's */
         // Store ETH current account
-        console.log("InitContract")
         web3.eth.getCoinbase(function(err, account) {
             if(err == null) {
                 App.account = account;
-                console.log(account);
-                $("#accountId").html(account);
             }
         });
         $.getJSON("Try.json").done(function(data) {
             App.contracts["Try"] = TruffleContract(data);
             App.contracts["Try"].setProvider(App.web3Provider);
-            return App.listenForEvents();
+            return App.render();
         });
-           
+    
         //return App.listenForEvents(); 
     },
 
-    listenForEvents: function() { 
-        /* Activate event listeners */
-        //App.contracts["Try"].deployed().then(async (instance) => {
-        //    web3.eth.getBlockNumber(function (error, block) {
-        //        // click is the Solidity event
-        //        instance.click().on('data', function (event) {
-        //            $("#eventId").html("Event catched!");
-        //            console.log("Event catched");
-        //            console.log(event);
-        //            console.log(block); // If you want to get the block
-        //        });  
-        //    });
-        //});
-           
-        return App.render();
-    },
-
-    render: function() { 
-        /* Render page */ 
+    render: function(){
         App.contracts["Try"].deployed().then(async(instance) =>{
-            // Call the value function (value is a public attribute)
-            const check = await instance.owner();
-            if (check==App.account){
+            const v = await instance.owner(); // Solidity uint are Js BigNumbers 
+            if (v==App.account){
                 App.isManager = true;
-                document.getElementById("buttonManager").style.display="block";
-                document.getElementById("buttonManager1").style.display="block";
-                $("#valueId").html("" + 0);
+                document.getElementById("mgmt").style.display="block";
             }
-            console.log(App.isManager)
-            $("#valueId").html("" + 0);
-            
-        });      
-    },
-
-    // Call a function of a smart contract
-    // The function send an event that triggers a transaction:: Metamask pops up and
-    // ask the user to confirm the transaction
-    startNewRound: function() {
-        console.log("StartNewRound")
-        App.contracts["Try"].deployed().then(async(instance) =>{
-            await instance.startNewRound({from: App.account});
         });
-    },
+    }
+}  
 
-}   
-
+//App.init()
 // Call init whenever the window loads
 $(function() {
     $(window).on('load', function () {
-        console.log("inizio")
         App.init();
-        console.log("fine");
     });
 }); 
+
+
+//<script> 
+//  var owner = App.getOwner()
+//  var currentAccount = App.getAccount()
+//  if (owner != currentAccount){
+//    alert("Ops")
+//  }
+//</script>
