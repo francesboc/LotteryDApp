@@ -8,12 +8,31 @@
     <title>Manager</title>
     <link rel="stylesheet" href="nicepage.css" media="screen">
 <link rel="stylesheet" href="Manager.css" media="screen">
-    <script class="u-script" type="text/javascript" src="jquery.js" defer=""></script>
+    <!-- <script class="u-script" type="text/javascript" src="jquery.js" defer=""></script>-->
+    <script class="u-script" type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js" defer=""></script>
     <script class="u-script" type="text/javascript" src="nicepage.js" defer=""></script>
     <meta name="generator" content="Nicepage 4.12.21, nicepage.com">
     <link id="u-theme-google-font" rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i|Open+Sans:300,300i,400,400i,500,500i,600,600i,700,700i,800,800i">
     <link id="u-page-google-font" rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i|Open+Sans:300,300i,400,400i,500,500i,600,600i,700,700i,800,800i">
-    
+
+    <link rel="apple-touch-icon" sizes="57x57" href="../images/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="../images/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="../images/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="../images/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="../images/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="../images/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="../images/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="../images/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="../images/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="../images/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16.png">
+    <link rel="manifest" href="../images/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="../images/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">    
+
     <script type="application/ld+json">{
 		"@context": "http://schema.org",
 		"@type": "Organization",
@@ -40,7 +59,8 @@
           </div>
           <div class="u-custom-menu u-nav-container">
             <ul class="u-nav u-unstyled u-nav-1"><li class="u-nav-item"><a class="u-button-style u-nav-link u-text-active-palette-1-base u-text-hover-palette-2-base" href="Manager.html" style="padding: 10px 20px;">Manager</a>
-</li><li class="u-nav-item"><a class="u-button-style u-nav-link u-text-active-palette-1-base u-text-hover-palette-2-base" href="Home.html" style="padding: 10px 20px;">Home</a>
+            </li><li class="u-nav-item"><a id="evento" style="display: none" class="u-button-style u-nav-link" href="Home.html">Evento</a>
+            </li><li class="u-nav-item"><a class="u-button-style u-nav-link u-text-active-palette-1-base u-text-hover-palette-2-base" href="Home.html" style="padding: 10px 20px;">Home</a>
 </li><li class="u-nav-item"><a class="u-button-style u-nav-link u-text-active-palette-1-base u-text-hover-palette-2-base" href="Account.html" style="padding: 10px 20px;">Account</a>
 </li></ul>
           </div>
@@ -49,7 +69,8 @@
               <div class="u-inner-container-layout u-sidenav-overflow">
                 <div class="u-menu-close"></div>
                 <ul class="u-align-center u-nav u-popupmenu-items u-unstyled u-nav-2"><li class="u-nav-item"><a class="u-button-style u-nav-link" href="Manager.html">Manager</a>
-</li><li class="u-nav-item"><a class="u-button-style u-nav-link" href="Home.html">Home</a>
+                </li><li class="u-nav-item"><a id="evento1" style="display: none" class="u-button-style u-nav-link" href="Home.html">Evento</a>
+                </li><li class="u-nav-item"><a class="u-button-style u-nav-link" href="Home.html">Home</a>
 </li><li class="u-nav-item"><a class="u-button-style u-nav-link" href="Account.html">Account</a>
 </li></ul>
               </div>
@@ -67,12 +88,12 @@
               <div class="u-align-left u-container-style u-layout-cell u-left-cell u-size-45 u-layout-cell-1">
                 <div class="u-container-layout u-valign-middle u-container-layout-1">
                   <h2 class="u-text u-text-default u-text-1">Current Lottery Balance:</h2>
-                  <p class="u-text u-text-2">Sample text. Lorem ipsum dolor sit amet, consectetur adipiscing elit nullam nunc justo sagittis suscipit ultrices.</p>
+                  <p id="lotteryBalance" class="u-text u-text-2">0</p>
                 </div>
               </div>
               <div class="u-align-center u-container-style u-layout-cell u-right-cell u-size-15 u-layout-cell-2">
                 <div class="u-container-layout u-valign-middle u-container-layout-2">
-                  <a href="###" class="u-btn u-button-style u-palette-2-base u-btn-1">Read More</a>
+                  <a id="lotteryStart" href="###" onclick="App.createLottery()" class="u-btn u-button-style u-palette-2-base u-btn-1">Start lottery now!</a>
                 </div>
               </div>
             </div>
@@ -107,17 +128,17 @@
           <div class="u-repeater u-repeater-1">
             <div class="u-container-style u-list-item u-repeater-item">
               <div class="u-container-layout u-similar-container u-container-layout-1">
-                <a href="#" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-1">read more</a>
+                <a href="#" onclick="App.startNewRound()" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-1">Start new round</a>
               </div>
             </div>
             <div class="u-container-style u-list-item u-repeater-item">
               <div class="u-container-layout u-similar-container u-container-layout-2">
-                <a href="#" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-2">read more</a>
+                <a href="#" onclick="App.drawNumbers()" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-2">Draw numbers</a>
               </div>
             </div>
             <div class="u-container-style u-list-item u-repeater-item">
               <div class="u-container-layout u-similar-container u-container-layout-3">
-                <a href="#" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-3">read more</a>
+                <a href="#" onclick="App.closeLottery()" class="u-btn u-button-style u-custom-item u-palette-2-base u-btn-3">Close Lottery</a>
               </div>
             </div>
           </div>
@@ -148,8 +169,8 @@
   <!-- Include all compiled plugins (below), or include individual files as needed -->
   <script src="../js/bootstrap.min.js"></script>
   <!-- Web3 -->
-  <script src="../js/web3.min.js"></script>
-  <script src="../js/truffle-contract.js"></script>
+  <script src="./dist/web3.min.js"></script>
+  <script src="./dist/truffle-contract.js"></script>
   <!-- App -->
   <script src="../js/manager.js"></script>
   </body>

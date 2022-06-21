@@ -2,6 +2,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.6.0",
     "@truffle/contract": "^4.5.14",
+    "js-cookie": "^3.0.1",
     "lite-server": "^2.6.1",
     "web3": "^1.7.3"
   },

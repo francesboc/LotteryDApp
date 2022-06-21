@@ -51,12 +51,14 @@ contract Try {
     event NewRound(string str, uint _start, uint _end);
     event ChangeBack(string str, uint _change);
     event NFTMint(string str, uint _class);
+    event LotteryCreated();
+    event LotteryClosed();
 
     constructor(uint _M, uint _K) {
         M = _M;
         K = _K;
         isRoundActive = false;
-        isContractActive = true;
+        isContractActive = false;
         isPrizeGiven = true;
         owner = msg.sender;
         uint i=0;
@@ -64,6 +66,19 @@ contract Try {
         // Generation of first eight NFT
         for (i=0; i<8; i++)
             nft.mint(i+1);
+    }
+
+    /***
+    It is required to implement a function Create Lottery
+which is used by the manager to create a new lottery. This function creates
+an event which is notied to all the potential users who can be interested in
+joining the lottery
+     */
+    function createLottery() public {
+        require(msg.sender == owner);
+        require(!isContractActive);
+        isContractActive = true;
+        emit LotteryCreated();
     }
 
     /**
@@ -260,7 +275,7 @@ contract Try {
             emit ToLog("Users refunded");
         }
 
-        emit ToLog("Lottery closed");
+        emit LotteryClosed();
     }
 
 }

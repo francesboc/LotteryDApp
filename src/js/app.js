@@ -56,18 +56,17 @@ App = {
 
     listenForEvents: function() { 
         /* Activate event listeners */
-        //App.contracts["Try"].deployed().then(async (instance) => {
-        //    web3.eth.getBlockNumber(function (error, block) {
-        //        // click is the Solidity event
-        //        instance.click().on('data', function (event) {
-        //            $("#eventId").html("Event catched!");
-        //            console.log("Event catched");
-        //            console.log(event);
-        //            console.log(block); // If you want to get the block
-        //        });  
-        //    });
-        //});
-           
+        App.contracts["Try"].deployed().then(async (instance) => {
+            instance.LotteryCreated().on('data', function (event) {
+                alert("A new lottery has started, buy ticket now!")
+                setCookie("notified","yes")
+                console.log(event);
+            });
+            instance.LotteryClosed().on('data', function (event) {
+                alert("A new lottery has started, buy ticket now!")
+                console.log(event);
+            });
+        });
         return App.render();
     },
 
@@ -76,7 +75,7 @@ App = {
         App.contracts["Try"].deployed().then(async(instance) =>{
             // Call the value function (value is a public attribute)
             const check = await instance.owner();
-            if (check==App.account){
+            if (check.toLowerCase()==App.account){
                 App.isManager = true;
                 document.getElementById("buttonManager").style.display="block";
                 document.getElementById("buttonManager1").style.display="block";
@@ -89,22 +88,69 @@ App = {
     },
 
     // Call a function of a smart contract
-    // The function send an event that triggers a transaction:: Metamask pops up and
-    // ask the user to confirm the transaction
-    startNewRound: function() {
-        console.log("StartNewRound")
+    buy: function(ticket) {
+        console.log("buy")
         App.contracts["Try"].deployed().then(async(instance) =>{
-            await instance.startNewRound({from: App.account});
+            await instance.buy(ticket,{from: App.account});
         });
     },
 
 }   
 
 // Call init whenever the window loads
-$(function() {
-    $(window).on('load', function () {
-        console.log("inizio")
-        App.init();
-        console.log("fine");
-    });
-}); 
+//$(function() {
+$(window).on('load', function () {
+    var notified = checkCookie('notified')
+    if(notified == 0){
+        console.log("Setting local cookie")
+        setLocalCookie("notified","no")
+    }
+    App.init();
+    var lotteryStart = getCookie('lotteryStart');
+    if (lotteryStart != ""){
+        if( lotteryStart == "1"){
+            var _isnotified = getCookie('notified')
+            // lottery has started, notify the current user if not already notified
+            if(_isnotified == "no"){
+                alert("New lottery has started")
+                setCookie("notified","yes")
+            }
+        }
+        else if (lotteryStart == "0") {
+            // lottery has ended
+            setLocalCookie("notified","no")
+        }
+    }
+});
+//});
+
+function setCookie(cname, cvalue) {
+    document.cookie = cname + "=" + cvalue + ";path=/";
+}
+
+function setLocalCookie(cname, cvalue) {
+    document.cookie = cname + "=" + cvalue;
+}
+
+function getCookie(cname) {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for(let i = 0; i <ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) == 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return "";
+}
+
+function checkCookie(cname) {
+    let _cookie = getCookie(cname);
+    if (_cookie != "") {
+     return 1;
+    } else return 0
+}
