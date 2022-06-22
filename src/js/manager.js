@@ -70,11 +70,33 @@ App = {
 
     render: function(){
         App.contracts["Try"].deployed().then(async(instance) =>{
+            // Loading information
             const v = await instance.owner(); // Solidity uint are Js BigNumbers 
             if (v.toLowerCase()==App.account){
                 App.isManager = true;
                 document.getElementById("mgmt").style.display="block";
             }
+            var balance = await web3.eth.getBalance(instance.address);
+            document.getElementById("lotteryBalance").innerHTML = parseInt(balance)/1000000000 + " GWEI"
+            
+            var isContractActive = await instance.isContractActive();
+            var isRoundActive = await instance.isRoundActive();
+            var isPrizeGiven = await instance.isPrizeGiven();
+            var nTicketBougth = await instance.getTicketsLength();
+            nTicketBougth = parseInt(nTicketBougth);
+            var status = "Lottery is closed";
+
+            if (isContractActive){
+                status = "Lottery is active. A round can be started";
+                if(isRoundActive){
+                    status = "A round is in progress";
+                }
+                else if (isPrizeGiven && (nTicketBougth>0)){
+                    status = "Winning numbers extracted. Waiting for next command..."
+                }
+            }
+            document.getElementById("contractStatus").innerHTML = status
+            document.getElementById("nTicketBougth").innerHTML = nTicketBougth
         });
     },
 

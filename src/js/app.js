@@ -58,12 +58,43 @@ App = {
         /* Activate event listeners */
         App.contracts["Try"].deployed().then(async (instance) => {
             instance.LotteryCreated().on('data', function (event) {
-                alert("A new lottery has started, buy ticket now!")
-                setCookie("notified","yes")
+                alert("A new lottery has started, stay tuned for a new round to start!")
+                //setCookie("notified","yes")
                 console.log(event);
             });
+            instance.NewRound().on('data', function (event) {
+                alert("New round has started! Buy tickets now!")
+                // Delete previous tickets
+                document.cookie = "tickets=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+                //setCookie("notified","yes")
+                console.log(event);
+            });
+            // Ticket successfully bought, update interface
+            instance.TicketBought().on('data', function (event) {
+                var ticket = event.returnValues._numbers;
+                // Saving ticket of user
+                var savedTickets = getCookie("tickets");
+                if (savedTickets == '')
+                    savedTickets = []
+                else savedTickets = JSON.parse(savedTickets);
+                savedTickets.push(ticket)
+                setLocalCookie("tickets",JSON.stringify(savedTickets))
+
+                var elem = document.getElementById("ticketContainer");
+                var newElem = document.createElement("p");
+                var node = document.createTextNode(ticket);
+                newElem.appendChild(node);
+                elem.appendChild(newElem);
+                alert("Ticket successfully bought! Thank you :)")
+                console.log(event);
+            });
+            // Get wiinning numbers for this round
+            instance.ExtractedNumbers().on('data', function (event) {
+                var winningNumbers = event.returnValues.winningNumbers
+                console.log(winningNumbers);
+            });
             instance.LotteryClosed().on('data', function (event) {
-                alert("A new lottery has started, buy ticket now!")
+                alert("Lottery has been closed")
                 console.log(event);
             });
         });
@@ -79,10 +110,10 @@ App = {
                 App.isManager = true;
                 document.getElementById("buttonManager").style.display="block";
                 document.getElementById("buttonManager1").style.display="block";
-                $("#valueId").html("" + 0);
+                //$("#valueId").html("" + 0);
             }
             console.log(App.isManager)
-            $("#valueId").html("" + 0);
+            //$("#valueId").html("" + 0);
             
         });      
     },
@@ -91,7 +122,7 @@ App = {
     buy: function(ticket) {
         console.log("buy")
         App.contracts["Try"].deployed().then(async(instance) =>{
-            await instance.buy(ticket,{from: App.account});
+            await instance.buy(ticket,{from: App.account, value: web3.utils.toWei('10', 'gwei')});
         });
     },
 

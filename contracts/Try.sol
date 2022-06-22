@@ -53,6 +53,7 @@ contract Try {
     event NFTMint(string str, uint _class);
     event LotteryCreated();
     event LotteryClosed();
+    event ExtractedNumbers(uint[6] _numbers);
 
     constructor(uint _M, uint _K) {
         M = _M;
@@ -93,6 +94,8 @@ joining the lottery
         isPrizeGiven = false;
         blockNumber = block.number;
         roundDuration = blockNumber + M;
+        // Clean the tickets for this new round
+        delete tickets;
         emit NewRound("A new round has started.", blockNumber, roundDuration);
     }
 
@@ -175,6 +178,7 @@ joining the lottery
         // Gold number
         winningNumbers[5] = (uint(rand) % 26) + 1;
         emit NewWinningNumber(winningNumbers[5]);
+        emit ExtractedNumbers(winningNumbers);
         emit ToLog("Winning numbers extracted");
         // Give the awards to users
         givePrizes();
@@ -241,8 +245,6 @@ joining the lottery
         // Pay lottery operator with the contract's balance
         payable(owner).transfer(address(this).balance);
         emit ToLog("Operator refunded");
-        // Clean the tickets of this round
-        delete tickets;
     }
 
     /**
@@ -278,4 +280,10 @@ joining the lottery
         emit LotteryClosed();
     }
 
+    /**
+     * Utility functions
+     */
+     function getTicketsLength() public view returns(uint){
+        return tickets.length;
+     }
 }

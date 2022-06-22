@@ -78,29 +78,11 @@
     <section class="u-align-left u-clearfix u-section-1" id="carousel_8b30">
       <div class="u-clearfix u-sheet u-sheet-1">
         <h3 class="u-custom-font u-font-montserrat u-text u-text-1">Address: &nbsp;</h3>
-        <h1 id="accountId" class="u-custom-font u-font-montserrat u-text u-text-1"> &nbsp;</h3>
+        <h5 id="accountId" class="u-custom-font u-font-montserrat u-text u-text-1"> &nbsp;</h5>
         <div class="u-expanded-width u-list u-list-1">
           <div class="u-repeater u-repeater-1">
-            <div class="u-align-left u-container-style u-grey-5 u-list-item u-repeater-item u-shape-rectangle u-list-item-1">
-              <div class="u-container-layout u-similar-container u-container-layout-1">
-                <div class="u-palette-3-base u-shape u-shape-rectangle u-shape-1"></div>
-                <p class="u-text u-text-2"> Comfort produce husband boy her had hearing. Law others theirs passed but wishes. You day real less till dear read. Considered use dispatched melancholy sympathize discretion led.&nbsp;</p>
-              </div>
-            </div>
-            <div class="u-align-left u-container-style u-grey-5 u-list-item u-repeater-item u-shape-rectangle u-list-item-2">
-              <div class="u-container-layout u-similar-container u-container-layout-2">
-                <div class="u-palette-3-base u-shape u-shape-rectangle u-shape-2"></div>
-                <p class="u-text u-text-3"> Comfort produce husband boy her had hearing. Law others theirs passed but wishes. You day real less till dear read. Considered use dispatched melancholy sympathize discretion led.&nbsp;</p>
-              </div>
-            </div>
-            <div class="u-align-left u-container-style u-grey-5 u-list-item u-repeater-item u-shape-rectangle u-list-item-3">
-              <div class="u-container-layout u-similar-container u-container-layout-3">
-                <div class="u-palette-3-base u-shape u-shape-rectangle u-shape-3"></div>
-                <p class="u-text u-text-4"> Comfort produce husband boy her had hearing. Law others theirs passed but wishes. You day real less till dear read. Considered use dispatched melancholy sympathize discretion led.&nbsp;</p>
-              </div>
-            </div>
             <div class="u-align-left u-container-style u-grey-5 u-list-item u-repeater-item u-shape-rectangle u-list-item-4">
-              <div class="u-container-layout u-similar-container u-container-layout-4">
+              <div id="ticketContainer" class="u-container-layout u-similar-container u-container-layout-4">
                 <div class="u-palette-3-base u-shape u-shape-rectangle u-shape-4"></div>
                 <p class="u-text u-text-5"> Comfort produce husband boy her had hearing. Law others theirs passed but wishes. You day real less till dear read. Considered use dispatched melancholy sympathize discretion led.&nbsp;</p>
               </div>
@@ -176,7 +158,6 @@
               ticket.push(parseInt(b))
               document.getElementById('numbers5').value = ""
               document.getElementById('powerball').value = ""
-              alert("Ticket successfully purchased, thank you!")
               App.buy(ticket)
             }
           }
@@ -184,6 +165,17 @@
         else alert("Invalid ticket")
         console.log(ticket)
       }
+      // Retrieving user ticket
+      var savedTickets = getCookie("tickets");
+      if (savedTickets != '')
+        savedTickets = JSON.parse(savedTickets);
+        for (let i = 0; i < savedTickets.length; i++) {
+          var elem = document.getElementById("ticketContainer");
+          var newElem = document.createElement("p");
+          var node = document.createTextNode(savedTickets[i]);
+          newElem.appendChild(node);
+          elem.appendChild(newElem);
+        }
     </script>
   </body>
 </html>
