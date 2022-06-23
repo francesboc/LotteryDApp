@@ -59,6 +59,53 @@ App = {
                 setCookie('lotteryStart',"1")
                 console.log(event);
             });
+            instance.NFTMint().on('data', function (event) {
+                /*var _class = event.returnValues._class;
+                //async createNFTFromAssetData(content, options) {
+                // add the asset to IPFS
+                const filePath = options.path || 'asset.bin'
+                const basename =  path.basename(filePath)
+                
+                // When you add an object to IPFS with a directory prefix in its path,
+                // IPFS will create a directory structure for you. This is nice, because
+                // it gives us URIs with descriptive filenames in them e.g.
+                // 'ipfs://bafybeihhii26gwp4w7b7w7d57nuuqeexau4pnnhrmckikaukjuei2dl3fq/cat-pic.png' vs
+                // 'ipfs://bafybeihhii26gwp4w7b7w7d57nuuqeexau4pnnhrmckikaukjuei2dl3fq'
+                const ipfsPath = '/nft/' + basename
+                const { cid: assetCid } = await this.ipfs.add({ path: ipfsPath, content })
+                
+                // make the NFT metadata JSON
+                const assetURI = ensureIpfsUriPrefix(assetCid) + '/' + basename
+                const metadata = await this.makeNFTMetadata(assetURI, options)
+                
+                // add the metadata to IPFS
+                const { cid: metadataCid } = await this.ipfs.add({ 
+                    path: '/nft/metadata.json', 
+                    content: JSON.stringify(metadata)
+                })
+                const metadataURI = ensureIpfsUriPrefix(metadataCid) + '/metadata.json'
+                
+                // get the address of the token owner from options, 
+                // or use the default signing address if no owner is given
+                let ownerAddress = options.owner
+                if (!ownerAddress) {
+                    ownerAddress = await this.defaultOwnerAddress()
+                }
+                
+                // mint a new token referencing the metadata URI
+                const tokenId = await this.mintToken(ownerAddress, metadataURI)
+                
+                // format and return the results
+                return {
+                    tokenId,
+                    metadata,
+                    assetURI,
+                    metadataURI,
+                    assetGatewayURL: makeGatewayURL(assetURI),
+                    metadataGatewayURL: makeGatewayURL(metadataURI),
+                }*/
+                  
+            });
             instance.LotteryClosed().on('data', function (event) {
                 console.log("Event catched");
                 setCookie('lotteryStart',"0")
@@ -76,6 +123,7 @@ App = {
                 App.isManager = true;
                 document.getElementById("mgmt").style.display="block";
             }
+            console.log(App.isManager)
             var balance = await web3.eth.getBalance(instance.address);
             document.getElementById("lotteryBalance").innerHTML = parseInt(balance)/1000000000 + " GWEI"
             
@@ -135,10 +183,8 @@ App = {
 
 //App.init()
 // Call init whenever the window loads
-$(function() {
-    $(window).on('load', function () {
-        App.init();
-    });
+$(window).on('load', function () {
+    App.init();
 }); 
 
 function setCookie(cname, cvalue) {

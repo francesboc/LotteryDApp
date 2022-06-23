@@ -58,8 +58,10 @@ App = {
         /* Activate event listeners */
         App.contracts["Try"].deployed().then(async (instance) => {
             instance.LotteryCreated().on('data', function (event) {
-                alert("A new lottery has started, stay tuned for a new round to start!")
-                //setCookie("notified","yes")
+                if(App.isManager==false){
+                    alert("A new lottery has started, stay tuned for a new round to start!")
+                    setLocalCookie("notified","yes")
+                }
                 console.log(event);
             });
             instance.NewRound().on('data', function (event) {
@@ -80,11 +82,10 @@ App = {
                 savedTickets.push(ticket)
                 setLocalCookie("tickets",JSON.stringify(savedTickets))
 
-                var elem = document.getElementById("ticketContainer");
-                var newElem = document.createElement("p");
-                var node = document.createTextNode(ticket);
-                newElem.appendChild(node);
-                elem.appendChild(newElem);
+                var td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+ticket.slice(0,5)+"</td>"
+                var td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+ticket[5]+"</td>"
+                document.getElementById("ticketPlaceList").innerHTML +=
+                    "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
                 alert("Ticket successfully bought! Thank you :)")
                 console.log(event);
             });
@@ -95,6 +96,7 @@ App = {
             });
             instance.LotteryClosed().on('data', function (event) {
                 alert("Lottery has been closed")
+                setLocalCookie("notified","no")
                 console.log(event);
             });
         });
@@ -113,8 +115,13 @@ App = {
                 //$("#valueId").html("" + 0);
             }
             console.log(App.isManager)
-            //$("#valueId").html("" + 0);
-            
+            var isContractActive = await instance.isContractActive();
+            if(App.isManager==false && isContractActive && (getCookie("notified")=="no")){
+                alert("A new lottery has started, stay tuned for a new round to start!")
+                setLocalCookie("notified","yes")
+            } else if(isContractActive==false && (getCookie("notified")=="no")){
+                setLocalCookie("notified","no")
+            }
         });      
     },
 
@@ -124,33 +131,22 @@ App = {
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.buy(ticket,{from: App.account, value: web3.utils.toWei('10', 'gwei')});
         });
-    },
-
+    }
 }   
 
 // Call init whenever the window loads
 //$(function() {
 $(window).on('load', function () {
-    var notified = checkCookie('notified')
-    if(notified == 0){
+    if(getCookie('notified') == ""){
         console.log("Setting local cookie")
         setLocalCookie("notified","no")
     }
     App.init();
-    var lotteryStart = getCookie('lotteryStart');
-    if (lotteryStart != ""){
-        if( lotteryStart == "1"){
-            var _isnotified = getCookie('notified')
-            // lottery has started, notify the current user if not already notified
-            if(_isnotified == "no"){
-                alert("New lottery has started")
-                setCookie("notified","yes")
-            }
-        }
-        else if (lotteryStart == "0") {
-            // lottery has ended
-            setLocalCookie("notified","no")
-        }
+    var savedTickets = getCookie("tickets");
+    if (savedTickets != ''){
+        var docElem = document.getElementById("ticketsSection")
+        if(docElem != null)
+            docElem.style.display="block";
     }
 });
 //});
@@ -185,3 +181,4 @@ function checkCookie(cname) {
      return 1;
     } else return 0
 }
+
