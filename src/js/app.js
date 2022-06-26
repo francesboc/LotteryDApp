@@ -5,6 +5,7 @@ App = {
     url: 'http://localhost:8545', // Url for web3
     account: '0x0', // current ethereum account
     isManager: false,
+    err: null, 
 
     init: async function() { return await App.initWeb3(); },
 
@@ -58,30 +59,22 @@ App = {
         /* Activate event listeners */
         App.contracts["Try"].deployed().then(async (instance) => {
             instance.LotteryCreated().on('data', function (event) {
-                if(App.isManager==false){
+                if(!App.isManager){
                     alert("A new lottery has started, stay tuned for a new round to start!")
-                    setLocalCookie("notified","yes")
+                    setLocalCookie("startNotified","yes")
                 }
-                console.log(event);
+                // console.log(event);
             });
             instance.NewRound().on('data', function (event) {
-                alert("New round has started! Buy tickets now!")
+                if(!App.isManager)
+                    alert("New round has started! Buy tickets now!")
                 // Delete previous tickets
-                document.cookie = "tickets=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-                //setCookie("notified","yes")
-                console.log(event);
+                // document.cookie = "tickets=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+                setCookie("roundNotified","yes")
             });
             // Ticket successfully bought, update interface
             instance.TicketBought().on('data', function (event) {
                 var ticket = event.returnValues._numbers;
-                // Saving ticket of user
-                var savedTickets = getCookie("tickets");
-                if (savedTickets == '')
-                    savedTickets = []
-                else savedTickets = JSON.parse(savedTickets);
-                savedTickets.push(ticket)
-                setLocalCookie("tickets",JSON.stringify(savedTickets))
-
                 var td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+ticket.slice(0,5)+"</td>"
                 var td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+ticket[5]+"</td>"
                 document.getElementById("ticketPlaceList").innerHTML +=
@@ -91,12 +84,22 @@ App = {
             });
             // Get wiinning numbers for this round
             instance.ExtractedNumbers().on('data', function (event) {
-                var winningNumbers = event.returnValues.winningNumbers
-                console.log(winningNumbers);
+                if(!App.isManager)
+                    alert("Winning numbers extracted!")
+            });
+            instance.NFTWin().on('data', function (event) {
+                console.log(event)
+                var _addr = event.returnValues._addr;
+                if (_addr.toLowerCase() == App.account){
+                    var _class = event.returnValues._class;
+                    alert("Congratulations! You win a NFT of class "+_class)
+                }
             });
             instance.LotteryClosed().on('data', function (event) {
-                alert("Lottery has been closed")
-                setLocalCookie("notified","no")
+                if(!App.isManager)
+                    alert("Lottery has been closed")
+                setLocalCookie("startNotified","no")
+                setCookie("roundNotified","no")
                 console.log(event);
             });
         });
@@ -112,15 +115,59 @@ App = {
                 App.isManager = true;
                 document.getElementById("buttonManager").style.display="block";
                 document.getElementById("buttonManager1").style.display="block";
-                //$("#valueId").html("" + 0);
             }
             console.log(App.isManager)
             var isContractActive = await instance.isContractActive();
-            if(App.isManager==false && isContractActive && (getCookie("notified")=="no")){
-                alert("A new lottery has started, stay tuned for a new round to start!")
-                setLocalCookie("notified","yes")
-            } else if(isContractActive==false && (getCookie("notified")=="no")){
-                setLocalCookie("notified","no")
+            var isRoundActive = await instance.isRoundActive();
+            var isPrizeGiven = await instance.isPrizeGiven();
+            var nBuyers = await instance.getBuyersLength();
+            nBuyers = parseInt(nBuyers);
+            if(App.isManager==false){
+                // notify if was offline for new lottery
+                if (isContractActive && (getCookie("startNotified")=="no")){
+                    alert("A new lottery has started, stay tuned for a new round to start!")
+                    setLocalCookie("startNotified","yes")
+                }
+                // notify for a new round
+                if (isRoundActive && !isPrizeGiven && (getCookie("roundNotified")=="no")){
+                    alert("New round has started! Buy tickets now!")
+                    setLocalCookie("roundNotified","yes")
+                }
+                // re-set cookie
+                if (!isContractActive && (getCookie("startNotified")=="yes" || getCookie("roundNotified")=="yes")){
+                    setLocalCookie("startNotified","no")
+                    setLocalCookie("roundNotified","no")
+                }
+                if (isPrizeGiven && (getCookie("roundNotified")=="yes"))
+                    setLocalCookie("roundNotified","no")
+            }
+            var docElem = document.getElementById("extractedNumbers");
+            // rendering winning numbers
+            if(docElem != null){
+                if (isPrizeGiven && (nBuyers>0)){
+                    var winningNumbers = await instance.getWinningNumbers();
+                    var banner = "Lucky numbers: ";
+                    for(let i = 0; i <winningNumbers.length; i++) {
+                        banner += winningNumbers[i].words[0] + " ";
+                    }
+                    document.getElementById("textExtractedNumbers").innerHTML=banner;
+                    document.getElementById("extractedNumbers").style.display="block";
+                }
+            }
+            //rendering user tickets
+            docElem = document.getElementById("ticketsSection")
+            if(docElem != null){
+                var tickets = await instance.getTicketsFromAddress(App.account)
+                if(tickets.length > 0){
+                    for(let i = 0; i < tickets.length; i++) {
+                        var numbers = tickets[i].numbers;
+                        var td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+numbers.slice(0,5)+"</td>"
+                        var td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+numbers[5]+"</td>"
+                        document.getElementById("ticketPlaceList").innerHTML +=
+                            "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
+                    }
+                    docElem.style.display="block";
+                }
             }
         });      
     },
@@ -130,26 +177,28 @@ App = {
         console.log("buy")
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.buy(ticket,{from: App.account, value: web3.utils.toWei('10', 'gwei')});
+        }).catch((err) => {
+            if(err.message.includes("You can buy a ticket when a new round starts")){
+                alert("You can buy a ticket when a new round starts")
+            }
+            else if (err.message.includes("Round is closed. Try later.")){
+                alert("Round is closed. Try later.")
+            }
+            else if (err.message.includes("Lottery is closed.")){
+                alert("Lottery is closed.")
+            }
         });
     }
 }   
 
 // Call init whenever the window loads
-//$(function() {
 $(window).on('load', function () {
-    if(getCookie('notified') == ""){
-        console.log("Setting local cookie")
-        setLocalCookie("notified","no")
-    }
+    if(getCookie('startNotified') == "")
+        setLocalCookie("startNotified","no")
+    if(getCookie('roundNotified') == "")
+        setLocalCookie("roundNotified","no")
     App.init();
-    var savedTickets = getCookie("tickets");
-    if (savedTickets != ''){
-        var docElem = document.getElementById("ticketsSection")
-        if(docElem != null)
-            docElem.style.display="block";
-    }
 });
-//});
 
 function setCookie(cname, cvalue) {
     document.cookie = cname + "=" + cvalue + ";path=/";

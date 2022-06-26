@@ -93,7 +93,7 @@
     </section>
     <section class="u-align-center u-clearfix u-section-3" id="sec-9c9d">
       <div class="u-clearfix u-sheet u-valign-middle u-sheet-1">
-        <h2 class="u-text u-text-default u-text-1">PICK YOUR NUMBERS</h2>
+        <h2 class="u-text u-text-default u-text-1">Pick your numbers</h2>
         <div class="u-form u-form-1">
           <form action="#" class="u-clearfix u-form-horizontal u-form-spacing-15 u-inner-form" style="padding: 15px;">
             <div class="u-form-group u-form-name u-label-none">
@@ -112,7 +112,7 @@
     </section>
     <section  id="ticketsSection" style="display: none" class="u-align-center u-clearfix u-section-4" id="sec-40d8">
       <div class="u-clearfix u-sheet u-sheet-1">
-        <h2 class="u-text u-text-default u-text-1">Your tickets for this round:</h2>
+        <h2 class="u-text u-text-default u-text-1">Your tickets:</h2>
         <div class="u-expanded-width u-table u-table-responsive u-table-1">
           <table class="u-table-entity u-table-entity-1">
             <colgroup>
@@ -185,17 +185,17 @@
         console.log(ticket)
       }
       // Retrieving user ticket
-      var savedTickets = getCookie("tickets");
-      if (savedTickets != ''){
-        var td1 = ""
-        var td2 = ""
-        savedTickets = JSON.parse(savedTickets);
-        for (let i = 0; i < savedTickets.length; i++) {
-          td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+savedTickets[i].slice(0,5)+"</td>"
-          td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+savedTickets[i][5]+"</td>"
-          document.getElementById("ticketPlaceList").innerHTML += "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
-        }
-      }
+      //var savedTickets = getCookie("tickets");
+      //if (savedTickets != ''){
+      //  var td1 = ""
+      //  var td2 = ""
+      //  savedTickets = JSON.parse(savedTickets);
+      //  for (let i = 0; i < savedTickets.length; i++) {
+      //    td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+savedTickets[i].slice(0,5)+"</td>"
+      //    td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+savedTickets[i][5]+"</td>"
+      //    document.getElementById("ticketPlaceList").innerHTML += "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
+      //  }
+      //}
     </script>
   </body>
 </html>

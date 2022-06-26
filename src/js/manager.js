@@ -130,8 +130,8 @@ App = {
             var isContractActive = await instance.isContractActive();
             var isRoundActive = await instance.isRoundActive();
             var isPrizeGiven = await instance.isPrizeGiven();
-            var nTicketBougth = await instance.getTicketsLength();
-            nTicketBougth = parseInt(nTicketBougth);
+            var nBuyers = await instance.getBuyersLength();
+            nBuyers = parseInt(nBuyers);
             var status = "Lottery is closed";
 
             if (isContractActive){
@@ -139,12 +139,12 @@ App = {
                 if(isRoundActive){
                     status = "A round is in progress";
                 }
-                else if (isPrizeGiven && (nTicketBougth>0)){
-                    status = "Winning numbers extracted. Waiting for next command..."
+                else if (isPrizeGiven && (nBuyers>0)){
+                    status = "Winning numbers extracted!"
                 }
             }
             document.getElementById("contractStatus").innerHTML = status
-            document.getElementById("nTicketBougth").innerHTML = nTicketBougth
+            document.getElementById("nBuyers").innerHTML = nBuyers
         });
     },
 
@@ -152,22 +152,39 @@ App = {
     createLottery: function() {
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.createLottery({from: App.account});
+        }).catch((err) => {
+            if(err.message.includes("Lottery is already open."))
+                alert("Lottery is already open.")
         });
-        console.log("createLottery")
     },
 
     // Call a function of a smart contract
     startNewRound: function() {
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.startNewRound({from: App.account});
+        }).catch((err) => {
+            if(err.message.includes("Lottery is closed.")){
+                alert("Lottery is closed.")
+            } else if (err.message.includes("A new round can start after the previous expires.")){
+                alert("A new round can start after the previous expires.")
+            } else if (err.message.includes("Wait for prizes before start a new round.")){
+                alert("Wait for prizes before start a new round.")
+            }
         });
-        console.log("StartNewRound")
     },
 
     // Call a function of a smart contract
     drawNumbers: function() {
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.drawNumbers({from: App.account});
+        }).catch((err) => {
+            if(err.message.includes("Lottery is closed.")){
+                alert("Lottery is closed.")
+            } else if (err.message.includes("Too early to draw numbers")){
+                alert("Too early to draw numbers")
+            } else if (err.message.includes("Already drawn winning numbers.")){
+                alert("Already drawn winning numbers.")
+            } else alert("Extracted numbers are duplicated. Retry.")
         });
         console.log("drawNumbers")
     },
@@ -176,12 +193,13 @@ App = {
     closeLottery: function() {
         App.contracts["Try"].deployed().then(async(instance) =>{
             await instance.closeLottery({from: App.account});
+        }).catch((err) => {
+            if(err.message.includes("Lottery is already closed."))
+                alert("Lottery is already closed.")
         });
-        console.log("closeLottery")
     }
 }  
 
-//App.init()
 // Call init whenever the window loads
 $(window).on('load', function () {
     App.init();

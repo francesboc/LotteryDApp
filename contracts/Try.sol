@@ -10,13 +10,18 @@ import "./KittyNFT.sol";
 
 // A representation of a ticket in lottery
 struct Ticket{
-    address buyer;
     uint[6] numbers;
     uint matches;
-    uint powerballNum;
     bool powerballMatch;
     bool isWinning;
 }
+
+struct User{
+    Ticket[] tickets;
+    uint nTicket;
+    uint nTicketRound;
+}
+
 
 contract Try {
 
@@ -40,10 +45,12 @@ contract Try {
     bool public isPrizeGiven;
 
     address public owner;
+    address[] public buyers;
 
     KittyNFT nft;
-    Ticket[] public tickets; 
- 
+    
+    mapping (address => User) public players;
+
     event TicketBought(string result, address _addr, uint[6] _numbers);
     event NFTWin(string str, address _addr, uint _class);
     event ToLog(string str);
@@ -69,15 +76,19 @@ contract Try {
             nft.mint(i+1);
     }
 
-    /***
-    It is required to implement a function Create Lottery
-which is used by the manager to create a new lottery. This function creates
-an event which is notied to all the potential users who can be interested in
-joining the lottery
-     */
+    //function pushTicket(uint[6] memory numbers) public {
+    //    players[msg.sender].nTicket += 1;
+    //    players[msg.sender].nTicketRound += 1;
+    //    players[msg.sender].tickets.push(Ticket(numbers, 0, false,false));
+    //}
+//
+    //function getTicket(address addr) public view returns(User memory){
+    //    return players[addr];
+    //}
+    
     function createLottery() public {
-        require(msg.sender == owner);
-        require(!isContractActive);
+        require(msg.sender == owner, "Only the owner can start a new lottery.");
+        require(!isContractActive, "Lottery is already open.");
         isContractActive = true;
         emit LotteryCreated();
     }
@@ -94,8 +105,8 @@ joining the lottery
         isPrizeGiven = false;
         blockNumber = block.number;
         roundDuration = blockNumber + M;
-        // Clean the tickets for this new round
-        delete tickets;
+        // Clean the tickets of this round
+        delete buyers;
         emit NewRound("A new round has started.", blockNumber, roundDuration);
     }
 
@@ -105,7 +116,7 @@ joining the lottery
      * @return bool: True in case of successful purchase, False o.w
      */
     function buy(uint[6] memory numbers) public payable returns(bool) {
-        require(isContractActive,"Lottery is closed."); // 853
+        require(isContractActive,"Lottery is closed."); 
         require(isRoundActive, "Round is closed. Try later.");
         require(block.number <= roundDuration, "You can buy a ticket when a new round starts.");
         require(msg.value >= ticketPrice, "10 gwei are required to buy a ticket.");
@@ -126,14 +137,19 @@ joining the lottery
                 require(numbers[i] >= 1 && numbers[i] <= 26, "Powerball number must be in range [1,26]");
         }
         // Ticket can be bought, All checks passed
-        tickets.push(Ticket(msg.sender, numbers, 0, numbers[5], false,false));
+        players[msg.sender].nTicket += 1;
+        if (players[msg.sender].nTicketRound==0)
+            buyers.push(msg.sender);
 
-        emit TicketBought("Ticket successfully purchased ", msg.sender, numbers);
-        uint change = msg.value - ticketPrice; // 72
+        players[msg.sender].nTicketRound += 1;
+        players[msg.sender].tickets.push(Ticket(numbers, 0, false,false));
+
+        uint change = msg.value - ticketPrice; 
         if( change > 0){
             payable(msg.sender).transfer(change);
             emit ChangeBack("Change issued", change);
         }
+        emit TicketBought("Ticket successfully purchased ", msg.sender, numbers);
         return true;
     }
 
@@ -148,41 +164,35 @@ joining the lottery
         require(block.number >= roundDuration + K, "Too early to draw numbers");
         require(!isPrizeGiven, "Already drawn winning numbers.");
         isRoundActive = false;
-        uint i;
         bool[69] memory picked;
-        for (i=0; i<69; i++)
-            picked[i] = false; 
-        uint extractedNumber;
-        // bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, blockhash(roundDuration+K)));
-        bytes32 bhash = keccak256(abi.encodePacked(block.difficulty, block.timestamp, roundDuration + K)); // replacement for testing
-        bytes memory bytesArray = new bytes(32);
+        for (uint i=0; i<69; i++)
+            picked[i] = false;
+
+        //uint extractedNumber;
+        uint nounce = 0;
+        uint[6] memory randomNumbers;
+        bytes32 bhash = keccak256(abi.encodePacked(nounce,block.difficulty,block.timestamp, roundDuration + K));
+        bytes memory bytesArray = abi.encodePacked(bhash);
         bytes32 rand;
         for (uint j=0; j<5; j++){
-            for (i=0; i <32; i++)
-                bytesArray[i] = bhash[i];
-            rand = keccak256(bytesArray);
             // generate random
-            extractedNumber = (uint(rand) % 69) + 1;
-            if(!picked[extractedNumber-1]){
-                // Not already extracted, this is a winning number
-                winningNumbers[j] = extractedNumber;
-                picked[extractedNumber-1] = true;
-                emit NewWinningNumber(extractedNumber);
-            }
-            else{
-                // number already extracted. Retry.
-                j -= 1;
-            }
-            bhash = bhash ^ rand; // xor to generate another random value
+            rand = keccak256(bytesArray);
+            randomNumbers[j] = (uint(rand) % 69) + 1;
+            bytesArray = abi.encodePacked(bhash ^ rand, nounce);
+            nounce++;
         }
+        for(uint j=0; j<5; j++){
+            require(!picked[randomNumbers[j]-1], "Extracted numbers are duplicated. Retry.");
+            picked[randomNumbers[j]-1] = true;
+        }
+
+        winningNumbers = randomNumbers;
         // Gold number
         winningNumbers[5] = (uint(rand) % 26) + 1;
-        emit NewWinningNumber(winningNumbers[5]);
-        emit ExtractedNumbers(winningNumbers);
         emit ToLog("Winning numbers extracted");
+        emit ExtractedNumbers(winningNumbers);
         // Give the awards to users
         givePrizes();
-        
         return true;
     }   
 
@@ -194,58 +204,63 @@ joining the lottery
         require(msg.sender==owner, "Only the owner can draw numbers.");
         require(!isRoundActive, "Round still in progress.");
         require(!isPrizeGiven, "Already given prizes.");
-        uint powerBall = winningNumbers[5];
-        uint[6] memory userNumbers;
-        uint i;
+        isPrizeGiven = true;
         // select winners
-        for(i=0; i < tickets.length; i++){
-            userNumbers = tickets[i].numbers;
-            for (uint j=0; j < 5; j++){
-                for(uint k=0; k < 5; k++){
-                    if(userNumbers[k] == winningNumbers[j]){
-                        tickets[i].matches += 1;
-                        tickets[i].isWinning = true;
-                        break;
+        uint winNFTClass;
+        uint matches;
+        uint[6] memory userNumbers;
+        uint powerball = winningNumbers[5];
+        uint i;
+        // iterate over buyers
+        for(i=0; i< buyers.length; i++){
+            uint nTicket = players[buyers[i]].nTicket;
+            uint indexFirstPurchase = nTicket - players[buyers[i]].nTicketRound;
+            players[buyers[i]].nTicketRound = 0;
+            // iterate over purchased tickets
+            for (uint j=indexFirstPurchase; j < nTicket; j++){
+                matches = 0;
+                userNumbers = players[buyers[i]].tickets[j].numbers;
+                // iterate over numbers
+                for(uint k=0; k<5; k++){
+                    for(uint z=0; z < 5; z++){
+                        if(userNumbers[k] == winningNumbers[z]){
+                            matches += 1;
+                            break;
+                        }
                     }
                 }
-            }
-            if(tickets[i].powerballNum == powerBall){
-                tickets[i].powerballMatch = true;
-                tickets[i].isWinning = true;
-            }
-        }
-        uint matches;
-        // assign prizes based on matches
-        uint winNFTClass;
-        for (i=0; i< tickets.length; i++){
-            if(tickets[i].isWinning){
-                winNFTClass = 9;
-                matches =  tickets[i].matches;
-                if(matches == 1){
-                    winNFTClass = 7;
-                } else if (matches == 2){
-                    winNFTClass = 6;
-                } else if (matches == 3){
-                    winNFTClass = 5;
-                } else if (matches == 4){
-                    winNFTClass = 4;
-                } else if (matches == 5){
-                    winNFTClass = 2;
+                if((matches > 0) || (userNumbers[5] == powerball)){ // checking also powerball number
+                    players[buyers[i]].tickets[j].matches = matches;
+                    // assign prizes based on matches
+                    players[buyers[i]].tickets[j].isWinning = true;
+                    winNFTClass = 9;
+                    if(matches == 1){
+                        winNFTClass = 7;
+                    } else if (matches == 2){
+                        winNFTClass = 6;
+                    } else if (matches == 3){
+                        winNFTClass = 5;
+                    } else if (matches == 4){
+                        winNFTClass = 4;
+                    } else if (matches == 5){
+                        winNFTClass = 2;
+                    }
+                    if (userNumbers[5] == powerball){
+                        players[buyers[i]].tickets[j].powerballMatch = true;
+                        winNFTClass-=1;
+                    }
+                    // here we have to assign NFT to the address
+                    emit NFTWin("NFT Win!",buyers[i], winNFTClass);
+                    uint tokenId = nft.getTokenFromClass(winNFTClass);
+                    nft.awardItem(buyers[i], tokenId);
+                    mint(winNFTClass);
                 }
-                if (tickets[i].powerballMatch)
-                    winNFTClass-=1;
-                // here we have to assign NFT to the address
-                emit NFTWin("NFT Win!",tickets[i].buyer, winNFTClass);
-                uint tokenId = nft.getTokenFromClass(winNFTClass);
-                nft.awardItem(tickets[i].buyer, tokenId);
-                mint(winNFTClass);
             }
         }
-        isPrizeGiven = true;
         // Pay lottery operator with the contract's balance
         payable(owner).transfer(address(this).balance);
         emit ToLog("Operator refunded");
-    }
+    } 
 
     /**
      * @dev Used to mint a new NFT of a specific class
@@ -270,20 +285,31 @@ joining the lottery
         address payable userAddress;
         if(isRoundActive && !isPrizeGiven){
             // Need to refund players
-            for(uint i=0; i < tickets.length; i++){
-                userAddress = payable(tickets[i].buyer);
-                userAddress.transfer(ticketPrice);
+            for(uint i=0; i < buyers.length; i++){
+                uint nTicketRound = players[buyers[i]].nTicketRound;
+                players[buyers[i]].nTicketRound = 0;
+                userAddress = payable(buyers[i]);
+                userAddress.transfer(ticketPrice*nTicketRound);
             }
             emit ToLog("Users refunded");
         }
 
-        emit LotteryClosed();
+        emit ToLog("Lottery closed");
     }
 
     /**
      * Utility functions
      */
-     function getTicketsLength() public view returns(uint){
-        return tickets.length;
-     }
+    function getWinningNumbers() public view returns (uint[6] memory){
+        return winningNumbers;
+    }
+
+    function getBuyersLength() public view returns(uint){
+        return buyers.length;
+    }
+
+    function getTicketsFromAddress(address addr) public view returns(Ticket[] memory){
+        return players[addr].tickets;
+    }
+
 }
