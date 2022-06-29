@@ -91,7 +91,10 @@
               </div>
               <div class="u-align-center u-container-style u-layout-cell u-right-cell u-size-15 u-layout-cell-2">
                 <div class="u-container-layout u-valign-middle u-container-layout-2">
-                  <a id="lotteryStart" href="###" onclick="App.createLottery()" class="u-btn u-button-style u-palette-2-base u-btn-1">Start lottery now!</a>
+                  <a id="lotteryStart" onclick="validateCreate(document.getElementById('mElem').value,document.getElementById('kElem').value,document.getElementById('addrElem').value)" class="u-btn u-button-style u-palette-2-base u-btn-1">Start new lottery now!</a>
+                  <input type="number" placeholder="Round duration (e.g 5)" id="mElem" name="Mnumber" class="u-border-1 u-border-white-30 u-input u-input-rectangle">
+                  <input type="number" placeholder="K parameter (e.g 1)" id="kElem" name="Knumber" class="u-border-1 u-border-white-30 u-input u-input-rectangle">
+                  <input type="text" placeholder="Address" id="addrElem" name="address" class="u-border-1 u-border-white-30 u-input u-input-rectangle">
                 </div>
               </div>
             </div>
@@ -169,5 +172,21 @@
   <script src="./dist/truffle-contract.js"></script>
   <!-- App -->
   <script src="../js/manager.js"></script>
+  <script>
+    function validateCreate(_M, _K, owner){
+      if (_M == ""){
+        alert("You must provide number of rounds.")
+      } else if (_K == ""){
+        alert("You must provide a parameter K.")
+      } else if (owner == ""){
+        alert("You must provide the address of the owner")
+      } else{
+        document.getElementById('mElem').value = ""
+        document.getElementById('kElem').value = ""
+        document.getElementById('addrElem').value = ""
+        App.createLottery(_M,_K,owner);
+      }
+    }
+  </script>
   </body>
 </html>

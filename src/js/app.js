@@ -5,7 +5,7 @@ App = {
     url: 'http://localhost:8545', // Url for web3
     account: '0x0', // current ethereum account
     isManager: false,
-    err: null, 
+    tryAddress: null,
 
     init: async function() { return await App.initWeb3(); },
 
@@ -32,39 +32,53 @@ App = {
             App.web3Provider = new Web3.providers.HttpProvider(url);
         }
         web3 = new Web3(App.web3Provider);
-        return App.initContract();
+        new Web3
+        return App.initFactory();
     },
 
-    initContract: function() { 
+    initFactory: function() { 
         /* Upload the contract's */
         // Store ETH current account
-        console.log("InitContract")
         web3.eth.getCoinbase(function(err, account) {
             if(err == null) {
                 App.account = account;
-                console.log(account);
                 $("#accountId").html(account);
             }
         });
-        $.getJSON("Try.json").done(function(data) {
-            App.contracts["Try"] = TruffleContract(data);
-            App.contracts["Try"].setProvider(App.web3Provider);
-            return App.listenForEvents();
+        // retrieve the factory
+        $.getJSON("TryFactory.json").done(function(data) {
+            App.contracts["TryFactory"] = TruffleContract(data);
+            App.contracts["TryFactory"].setProvider(App.web3Provider);
+            //return App.listenForEvents();
+            return App.initContract();
         });
-           
-        //return App.listenForEvents(); 
+    },
+
+    initContract: function(){
+        App.contracts["TryFactory"].deployed().then(async (instance) => {
+            App.tryAddress = await instance.getLottteryAddr()
+            // A Try contract has been deployed, retrieving it
+            var jsonInt = await $.getJSON("Try.json") 
+            var myContract = await TruffleContract(jsonInt)
+            myContract.setProvider(App.web3Provider)
+            App.contracts["Try"] = myContract
+            return App.listenForEvents();
+        })
     },
 
     listenForEvents: function() { 
         /* Activate event listeners */
-        App.contracts["Try"].deployed().then(async (instance) => {
+        App.contracts["TryFactory"].deployed().then(async (instance) => {
             instance.LotteryCreated().on('data', function (event) {
                 if(!App.isManager){
                     alert("A new lottery has started, stay tuned for a new round to start!")
                     setLocalCookie("startNotified","yes")
+                    // reload contract
+                    return App.initContract();
                 }
-                // console.log(event);
             });
+        })
+        App.contracts["Try"].at(App.tryAddress).then(async (instance) => {
             instance.NewRound().on('data', function (event) {
                 if(!App.isManager)
                     alert("New round has started! Buy tickets now!")
@@ -97,10 +111,17 @@ App = {
             });
             instance.LotteryClosed().on('data', function (event) {
                 if(!App.isManager)
-                    alert("Lottery has been closed")
+                    alert("Lottery has been closed.")
                 setLocalCookie("startNotified","no")
                 setCookie("roundNotified","no")
                 console.log(event);
+            });
+            instance.Refund().on('data', function (event) {
+                var _addr = event.returnValues._addr;
+                var _change = event.returnValues._change;
+                if (App.account == _addr.toLowerCase()){
+                    alert("You have been refunded for " + _change)
+                }
             });
         });
         return App.render();
@@ -108,8 +129,7 @@ App = {
 
     render: function() { 
         /* Render page */ 
-        App.contracts["Try"].deployed().then(async(instance) =>{
-            // Call the value function (value is a public attribute)
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             const check = await instance.owner();
             if (check.toLowerCase()==App.account){
                 App.isManager = true;
@@ -174,8 +194,7 @@ App = {
 
     // Call a function of a smart contract
     buy: function(ticket) {
-        console.log("buy")
-        App.contracts["Try"].deployed().then(async(instance) =>{
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             await instance.buy(ticket,{from: App.account, value: web3.utils.toWei('10', 'gwei')});
         }).catch((err) => {
             if(err.message.includes("You can buy a ticket when a new round starts")){

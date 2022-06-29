@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./KittyNFT.sol";
-
 /**
  * @title Try
  * @dev A lottory of NFT
@@ -22,6 +20,11 @@ struct User{
     uint nTicketRound;
 }
 
+interface IKittyNFT {
+    function mint(uint class) external returns (uint256);
+    function getTokenFromClass(uint class) external view returns(uint);
+    function awardItem(address player, uint256 tokenId) external;
+}
 
 contract Try {
 
@@ -45,9 +48,11 @@ contract Try {
     bool public isPrizeGiven;
 
     address public owner;
+    address public factory;
     address[] public buyers;
+    address public kittyNFTAddress;
 
-    KittyNFT nft;
+    IKittyNFT nft;
     
     mapping (address => User) public players;
 
@@ -57,40 +62,24 @@ contract Try {
     event NewWinningNumber(uint number);
     event NewRound(string str, uint _start, uint _end);
     event ChangeBack(string str, uint _change);
+    event Refund(address _addr, uint _change);
     event NFTMint(string str, uint _class);
-    event LotteryCreated();
     event LotteryClosed();
     event ExtractedNumbers(uint[6] _numbers);
 
-    constructor(uint _M, uint _K) {
+    constructor(uint _M, uint _K, address KittyNFTaddr, address _owner) {
         M = _M;
         K = _K;
         isRoundActive = false;
-        isContractActive = false;
+        isContractActive = true;
         isPrizeGiven = true;
-        owner = msg.sender;
+        owner = _owner;
+        factory = msg.sender;
         uint i=0;
-        nft = new KittyNFT(owner);
+        nft = IKittyNFT(KittyNFTaddr);
         // Generation of first eight NFT
         for (i=0; i<8; i++)
             nft.mint(i+1);
-    }
-
-    //function pushTicket(uint[6] memory numbers) public {
-    //    players[msg.sender].nTicket += 1;
-    //    players[msg.sender].nTicketRound += 1;
-    //    players[msg.sender].tickets.push(Ticket(numbers, 0, false,false));
-    //}
-//
-    //function getTicket(address addr) public view returns(User memory){
-    //    return players[addr];
-    //}
-    
-    function createLottery() public {
-        require(msg.sender == owner, "Only the owner can start a new lottery.");
-        require(!isContractActive, "Lottery is already open.");
-        isContractActive = true;
-        emit LotteryCreated();
     }
 
     /**
@@ -188,7 +177,7 @@ contract Try {
 
         winningNumbers = randomNumbers;
         // Gold number
-        winningNumbers[5] = (uint(rand) % 26) + 1;
+        winningNumbers[5] = 6;//(uint(rand) % 26) + 1;
         emit ToLog("Winning numbers extracted");
         emit ExtractedNumbers(winningNumbers);
         // Give the awards to users
@@ -290,11 +279,11 @@ contract Try {
                 players[buyers[i]].nTicketRound = 0;
                 userAddress = payable(buyers[i]);
                 userAddress.transfer(ticketPrice*nTicketRound);
+                emit Refund(userAddress, ticketPrice*nTicketRound);
             }
-            emit ToLog("Users refunded");
         }
 
-        emit ToLog("Lottery closed");
+        emit LotteryClosed();
     }
 
     /**
@@ -311,5 +300,4 @@ contract Try {
     function getTicketsFromAddress(address addr) public view returns(Ticket[] memory){
         return players[addr].tickets;
     }
-
 }

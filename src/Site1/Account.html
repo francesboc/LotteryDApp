@@ -110,6 +110,27 @@
         </div>
       </div>
     </section>
+    <section  id="NFTSection" style="display: none" class="u-align-center u-clearfix u-section-4" id="sec-40d8">
+      <div class="u-clearfix u-sheet u-sheet-1">
+        <h2 class="u-text u-text-default u-text-1">Your NFTs:</h2>
+        <div class="u-expanded-width u-table u-table-responsive u-table-1">
+          <table class="u-table-entity u-table-entity-1">
+            <colgroup>
+              <col width="66.6%">
+              <col width="33.4%">
+            </colgroup>
+            <thead class="u-align-center u-palette-1-base u-table-header u-table-header-1">
+              <tr style="height: 21px;">
+                <th class="u-align-center u-border-1 u-border-grey-30 u-table-cell">Link</th>
+                <th class="u-border-1 u-border-palette-1-light-1 u-table-cell u-table-cell-2">Class</th>
+              </tr>
+            </thead>
+            <tbody id="NFTlaceList" class="u-align-center u-table-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
     <section  id="ticketsSection" style="display: none" class="u-align-center u-clearfix u-section-4" id="sec-40d8">
       <div class="u-clearfix u-sheet u-sheet-1">
         <h2 class="u-text u-text-default u-text-1">Your tickets:</h2>
@@ -184,18 +205,6 @@
         else alert("Invalid ticket")
         console.log(ticket)
       }
-      // Retrieving user ticket
-      //var savedTickets = getCookie("tickets");
-      //if (savedTickets != ''){
-      //  var td1 = ""
-      //  var td2 = ""
-      //  savedTickets = JSON.parse(savedTickets);
-      //  for (let i = 0; i < savedTickets.length; i++) {
-      //    td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+savedTickets[i].slice(0,5)+"</td>"
-      //    td2 = "<td class=\"u-border-1 u-border-grey-30 u-table-cell u-table-cell-4\">"+savedTickets[i][5]+"</td>"
-      //    document.getElementById("ticketPlaceList").innerHTML += "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
-      //  }
-      //}
     </script>
   </body>
 </html>

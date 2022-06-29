@@ -5,6 +5,7 @@ App = {
     url: 'http://localhost:8545', // Url for web3
     account: '0x0', // current ethereum account
     isManager: false,
+    tryAddress: null,
 
     init: async function() { return await App.initWeb3(); },
 
@@ -31,10 +32,10 @@ App = {
             App.web3Provider = new Web3.providers.HttpProvider(url);
         }
         web3 = new Web3(App.web3Provider);
-        return App.initContract();
+        return App.initFactory();
     },
 
-    initContract: function() { 
+    initFactory: function() { 
         /* Upload the contract's */
         // Store ETH current account
         web3.eth.getCoinbase(function(err, account) {
@@ -42,83 +43,55 @@ App = {
                 App.account = account;
             }
         });
-        $.getJSON("Try.json").done(function(data) {
-            App.contracts["Try"] = TruffleContract(data);
-            App.contracts["Try"].setProvider(App.web3Provider);
-            return App.listenForEvents();
+        // retrieve the factory
+        $.getJSON("TryFactory.json").done(function(data) {
+            App.contracts["TryFactory"] = TruffleContract(data);
+            App.contracts["TryFactory"].setProvider(App.web3Provider);
+            //return App.listenForEvents();
+            return App.initContract();
         });
-    
-        //return App.listenForEvents(); 
+    },
+
+    initContract: function(){
+        App.contracts["TryFactory"].deployed().then(async (instance) => {
+            App.tryAddress = await instance.getLottteryAddr()
+            // A Try contract has been deployed, retrieving it
+            var jsonInt = await $.getJSON("Try.json") 
+            var myContract = await TruffleContract(jsonInt)
+            myContract.setProvider(App.web3Provider)
+            App.contracts["Try"] = myContract//await myContract.at(tryAddress)
+            return App.listenForEvents();
+        })
     },
 
     listenForEvents: function() { 
         /* Activate event listeners */
-        App.contracts["Try"].deployed().then(async (instance) => {
+        App.contracts["TryFactory"].deployed().then(async (instance) => {
             instance.LotteryCreated().on('data', function (event) {
-                console.log("Event catched");
-                setCookie('lotteryStart',"1")
-                console.log(event);
+                    alert("New lottery started!")
+            });
+        })
+        App.contracts["Try"].at(App.tryAddress).then(async (instance) => {
+            instance.NewRound().on('data', function (event) {
+                alert("New round started!")
             });
             instance.NFTMint().on('data', function (event) {
-                /*var _class = event.returnValues._class;
-                //async createNFTFromAssetData(content, options) {
-                // add the asset to IPFS
-                const filePath = options.path || 'asset.bin'
-                const basename =  path.basename(filePath)
-                
-                // When you add an object to IPFS with a directory prefix in its path,
-                // IPFS will create a directory structure for you. This is nice, because
-                // it gives us URIs with descriptive filenames in them e.g.
-                // 'ipfs://bafybeihhii26gwp4w7b7w7d57nuuqeexau4pnnhrmckikaukjuei2dl3fq/cat-pic.png' vs
-                // 'ipfs://bafybeihhii26gwp4w7b7w7d57nuuqeexau4pnnhrmckikaukjuei2dl3fq'
-                const ipfsPath = '/nft/' + basename
-                const { cid: assetCid } = await this.ipfs.add({ path: ipfsPath, content })
-                
-                // make the NFT metadata JSON
-                const assetURI = ensureIpfsUriPrefix(assetCid) + '/' + basename
-                const metadata = await this.makeNFTMetadata(assetURI, options)
-                
-                // add the metadata to IPFS
-                const { cid: metadataCid } = await this.ipfs.add({ 
-                    path: '/nft/metadata.json', 
-                    content: JSON.stringify(metadata)
-                })
-                const metadataURI = ensureIpfsUriPrefix(metadataCid) + '/metadata.json'
-                
-                // get the address of the token owner from options, 
-                // or use the default signing address if no owner is given
-                let ownerAddress = options.owner
-                if (!ownerAddress) {
-                    ownerAddress = await this.defaultOwnerAddress()
-                }
-                
-                // mint a new token referencing the metadata URI
-                const tokenId = await this.mintToken(ownerAddress, metadataURI)
-                
-                // format and return the results
-                return {
-                    tokenId,
-                    metadata,
-                    assetURI,
-                    metadataURI,
-                    assetGatewayURL: makeGatewayURL(assetURI),
-                    metadataGatewayURL: makeGatewayURL(metadataURI),
-                }*/
                   
             });
+            instance.ExtractedNumbers().on('data', function (event) {
+                alert("Winning numbers extracted!")
+            });
             instance.LotteryClosed().on('data', function (event) {
-                console.log("Event catched");
-                setCookie('lotteryStart',"0")
-                console.log(event);
+                alert("Lottery closed!")
             });
         });
         return App.render();
     },
 
     render: function(){
-        App.contracts["Try"].deployed().then(async(instance) =>{
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             // Loading information
-            const v = await instance.owner(); // Solidity uint are Js BigNumbers 
+            const v = await instance.owner();
             if (v.toLowerCase()==App.account){
                 App.isManager = true;
                 document.getElementById("mgmt").style.display="block";
@@ -132,7 +105,7 @@ App = {
             var isPrizeGiven = await instance.isPrizeGiven();
             var nBuyers = await instance.getBuyersLength();
             nBuyers = parseInt(nBuyers);
-            var status = "Lottery is closed";
+            var status = "";
 
             if (isContractActive){
                 status = "Lottery is active. A round can be started";
@@ -142,25 +115,38 @@ App = {
                 else if (isPrizeGiven && (nBuyers>0)){
                     status = "Winning numbers extracted!"
                 }
-            }
+            } else if (!isContractActive){
+                status = "Lottery is closed";
+            } else{
+                status = "Lottery is not yet started"
+            }   
             document.getElementById("contractStatus").innerHTML = status
-            document.getElementById("nBuyers").innerHTML = nBuyers
+            if(nBuyers != "undefined"){
+                document.getElementById("nBuyers").innerHTML = nBuyers
+            } else document.getElementById("nBuyers").innerHTML = 0
         });
     },
 
     // Call a function of a smart contract
-    createLottery: function() {
-        App.contracts["Try"].deployed().then(async(instance) =>{
-            await instance.createLottery({from: App.account});
-        }).catch((err) => {
-            if(err.message.includes("Lottery is already open."))
-                alert("Lottery is already open.")
-        });
+    createLottery: function(_M,_K,owner) {
+        // here we need to close the previous lottery
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
+            var isContractActive = await instance.isContractActive();
+            if(isContractActive)
+                await instance.closeLottery({from: App.account});
+        })
+        App.contracts["TryFactory"].deployed().then(async(instance) =>{
+            // instantiate new contract
+            await instance.createNewLottery({from: App.account})
+            // update App reference
+            App.tryAddress = await instance.getLottteryAddr()
+            // reload contract
+            return App.initContract();
+        })
     },
-
     // Call a function of a smart contract
     startNewRound: function() {
-        App.contracts["Try"].deployed().then(async(instance) =>{
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             await instance.startNewRound({from: App.account});
         }).catch((err) => {
             if(err.message.includes("Lottery is closed.")){
@@ -175,7 +161,7 @@ App = {
 
     // Call a function of a smart contract
     drawNumbers: function() {
-        App.contracts["Try"].deployed().then(async(instance) =>{
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             await instance.drawNumbers({from: App.account});
         }).catch((err) => {
             if(err.message.includes("Lottery is closed.")){
@@ -191,13 +177,14 @@ App = {
 
     // Call a function of a smart contract
     closeLottery: function() {
-        App.contracts["Try"].deployed().then(async(instance) =>{
+        App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
             await instance.closeLottery({from: App.account});
         }).catch((err) => {
             if(err.message.includes("Lottery is already closed."))
                 alert("Lottery is already closed.")
         });
     }
+
 }  
 
 // Call init whenever the window loads
