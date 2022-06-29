@@ -4,12 +4,15 @@ App = {
     web3Provider: null, // Web3 provider
     url: 'http://localhost:8545', // Url for web3
     account: '0x0', // current ethereum account
-    isManager: false,
-    tryAddress: null,
+    isManager: false, // tell if the connected user is the manager
+    tryAddress: null, // it stores the address of the deployed contract
 
     init: async function() { return await App.initWeb3(); },
 
-    // Functions
+    /**
+     * This function initialize Web3
+     * @returns Initialization of lottery factory
+     */
     initWeb3: async function() { 
         // Modern dapp browsers...
         if (window.ethereum) {
@@ -36,6 +39,10 @@ App = {
         return App.initFactory();
     },
 
+    /**
+     * Load the TryFactory contract by which the Try contract
+     * instance is retrieved.
+     */
     initFactory: function() { 
         /* Upload the contract's */
         // Store ETH current account
@@ -49,15 +56,18 @@ App = {
         $.getJSON("TryFactory.json").done(function(data) {
             App.contracts["TryFactory"] = TruffleContract(data);
             App.contracts["TryFactory"].setProvider(App.web3Provider);
-            //return App.listenForEvents();
+
             return App.initContract();
         });
     },
 
+    /**
+     * Retrieve the Try contract
+     */
     initContract: function(){
         App.contracts["TryFactory"].deployed().then(async (instance) => {
             App.tryAddress = await instance.getLottteryAddr()
-            // A Try contract has been deployed, retrieving it
+            // Here we are retrieving the instantiated contract
             var jsonInt = await $.getJSON("Try.json") 
             var myContract = await TruffleContract(jsonInt)
             myContract.setProvider(App.web3Provider)
@@ -66,6 +76,9 @@ App = {
         })
     },
 
+    /**
+     * Listener for important events from the backend.
+     */
     listenForEvents: function() { 
         /* Activate event listeners */
         App.contracts["TryFactory"].deployed().then(async (instance) => {
@@ -82,8 +95,6 @@ App = {
             instance.NewRound().on('data', function (event) {
                 if(!App.isManager)
                     alert("New round has started! Buy tickets now!")
-                // Delete previous tickets
-                // document.cookie = "tickets=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
                 setCookie("roundNotified","yes")
             });
             // Ticket successfully bought, update interface
@@ -94,7 +105,6 @@ App = {
                 document.getElementById("ticketPlaceList").innerHTML +=
                     "<tr style=\"height: 30px;\">" + td1 + td2 + "</tr>"
                 alert("Ticket successfully bought! Thank you :)")
-                console.log(event);
             });
             // Get wiinning numbers for this round
             instance.ExtractedNumbers().on('data', function (event) {
@@ -102,19 +112,18 @@ App = {
                     alert("Winning numbers extracted!")
             });
             instance.NFTWin().on('data', function (event) {
-                console.log(event)
                 var _addr = event.returnValues._addr;
                 if (_addr.toLowerCase() == App.account){
                     var _class = event.returnValues._class;
                     alert("Congratulations! You win a NFT of class "+_class)
                 }
+                console.log("NFT WIN")
             });
             instance.LotteryClosed().on('data', function (event) {
                 if(!App.isManager)
                     alert("Lottery has been closed.")
                 setLocalCookie("startNotified","no")
                 setCookie("roundNotified","no")
-                console.log(event);
             });
             instance.Refund().on('data', function (event) {
                 var _addr = event.returnValues._addr;
@@ -127,6 +136,9 @@ App = {
         return App.render();
     },
 
+    /**
+     * Rendering the application.
+     */
     render: function() { 
         /* Render page */ 
         App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
@@ -136,12 +148,17 @@ App = {
                 document.getElementById("buttonManager").style.display="block";
                 document.getElementById("buttonManager1").style.display="block";
             }
-            console.log(App.isManager)
+            var docElem = document.getElementById("ticketPrice1")
+            if(docElem != null){
+                var ticketPrice = await instance.ticketPrice();
+                docElem.innerHTML= parseInt(ticketPrice)/1000000000 + " GWEI";
+            }
             var isContractActive = await instance.isContractActive();
             var isRoundActive = await instance.isRoundActive();
             var isPrizeGiven = await instance.isPrizeGiven();
             var nBuyers = await instance.getBuyersLength();
             nBuyers = parseInt(nBuyers);
+            // Cookie management for offline notification
             if(App.isManager==false){
                 // notify if was offline for new lottery
                 if (isContractActive && (getCookie("startNotified")=="no")){
@@ -161,7 +178,7 @@ App = {
                 if (isPrizeGiven && (getCookie("roundNotified")=="yes"))
                     setLocalCookie("roundNotified","no")
             }
-            var docElem = document.getElementById("extractedNumbers");
+            docElem = document.getElementById("extractedNumbers");
             // rendering winning numbers
             if(docElem != null){
                 if (isPrizeGiven && (nBuyers>0)){
@@ -174,7 +191,7 @@ App = {
                     document.getElementById("extractedNumbers").style.display="block";
                 }
             }
-            //rendering user tickets
+            // rendering user tickets
             docElem = document.getElementById("ticketsSection")
             if(docElem != null){
                 var tickets = await instance.getTicketsFromAddress(App.account)
@@ -189,13 +206,28 @@ App = {
                     docElem.style.display="block";
                 }
             }
+            // rendering NFTs
+            docElem = document.getElementById("NFTSection")
+            if(docElem != null){
+                var nfts = await instance.getWonNFTsFromAddress(App.account)
+                if(nfts.length > 0){
+                    for(let i = 0; i < nfts.length; i++) {
+                        var nftDescr = nfts[i];
+                        var td1 = "<td class=\"u-border-1 u-border-grey-30 u-first-column u-table-cell u-table-cell-3\">"+nftDescr+"</td>"
+                        document.getElementById("NFTlaceList").innerHTML +=
+                            "<tr style=\"height: 30px;\">" + td1 + "</tr>"
+                    }
+                    docElem.style.display="block";
+                }
+            }
         });      
     },
 
     // Call a function of a smart contract
     buy: function(ticket) {
         App.contracts["Try"].at(App.tryAddress).then(async(instance) =>{
-            await instance.buy(ticket,{from: App.account, value: web3.utils.toWei('10', 'gwei')});
+            var ticketPrice = await instance.ticketPrice();
+            await instance.buy(ticket,{from: App.account, value: web3.utils.toWei(ticketPrice.toString(), 'wei')});
         }).catch((err) => {
             if(err.message.includes("You can buy a ticket when a new round starts")){
                 alert("You can buy a ticket when a new round starts")
@@ -219,6 +251,9 @@ $(window).on('load', function () {
     App.init();
 });
 
+/**
+ * Utility functions to manage cookies
+ */
 function setCookie(cname, cvalue) {
     document.cookie = cname + "=" + cvalue + ";path=/";
 }

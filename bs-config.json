@@ -1,5 +1,5 @@
 {
     "server": {
-        "baseDir": ["./src", "./build/contracts", "./node_modules/@truffle/contract","./node_modules/web3","./src/Site1"]
+        "baseDir": ["./src", "./build/contracts", "./node_modules/@truffle/contract","./node_modules/web3"]
     }
 }

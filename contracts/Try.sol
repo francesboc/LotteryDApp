@@ -14,27 +14,30 @@ struct Ticket{
     bool isWinning;
 }
 
+// Representation of user that bought tickets
 struct User{
     Ticket[] tickets;
     uint nTicket;
     uint nTicketRound;
 }
 
+// Interface for communicate with KittyNFT contract
 interface IKittyNFT {
     function mint(uint class) external returns (uint256);
     function getTokenFromClass(uint class) external view returns(uint);
     function awardItem(address player, uint256 tokenId) external;
+    function setLotteryAddress(address _lottery) external;
+    function getNFTsFromAddress(address addr) external view returns(string[] memory);
 }
 
 contract Try {
 
     // Round duration
     uint public M;
-    // Fixed ticket price
-    uint public constant ticketPrice = 10 gwei;
+    // Ticket price
+    uint public ticketPrice;
     // K parameter chosen by operator
     uint public K;
-    uint public blockNumber;
     // End of a round
     uint public roundDuration;
     // The drawn numbers 
@@ -47,13 +50,16 @@ contract Try {
     // Tells if prizes are already given
     bool public isPrizeGiven;
 
+    // Owner of the contract
     address public owner;
-    address public factory;
+    // Mantains the buyers for a round
     address[] public buyers;
+    // Store the address of KittyNFT contract
     address public kittyNFTAddress;
 
     IKittyNFT nft;
     
+    // Associate each address to an "account"
     mapping (address => User) public players;
 
     event TicketBought(string result, address _addr, uint[6] _numbers);
@@ -67,14 +73,14 @@ contract Try {
     event LotteryClosed();
     event ExtractedNumbers(uint[6] _numbers);
 
-    constructor(uint _M, uint _K, address KittyNFTaddr, address _owner) {
+    constructor(uint _M, uint _K, uint price ,address KittyNFTaddr, address _owner) {
         M = _M;
         K = _K;
+        ticketPrice = price * (1 gwei);
         isRoundActive = false;
         isContractActive = true;
         isPrizeGiven = true;
         owner = _owner;
-        factory = msg.sender;
         uint i=0;
         nft = IKittyNFT(KittyNFTaddr);
         // Generation of first eight NFT
@@ -92,11 +98,10 @@ contract Try {
         require(isPrizeGiven, "Wait for prizes before start a new round.");
         isRoundActive = true;
         isPrizeGiven = false;
-        blockNumber = block.number;
-        roundDuration = blockNumber + M;
+        roundDuration = block.number + M;
         // Clean the tickets of this round
         delete buyers;
-        emit NewRound("A new round has started.", blockNumber, roundDuration);
+        emit NewRound("A new round has started.", block.number, roundDuration);
     }
 
     /**
@@ -108,7 +113,7 @@ contract Try {
         require(isContractActive,"Lottery is closed."); 
         require(isRoundActive, "Round is closed. Try later.");
         require(block.number <= roundDuration, "You can buy a ticket when a new round starts.");
-        require(msg.value >= ticketPrice, "10 gwei are required to buy a ticket.");
+        require(msg.value >= ticketPrice, "Not enough wei to buy a ticket.");
         uint numebrsLen = numbers.length;
         require(numebrsLen == 6, "You have to pick 5 numbers and a powerball number");
         uint i;
@@ -247,8 +252,9 @@ contract Try {
             }
         }
         // Pay lottery operator with the contract's balance
+        uint balance = address(this).balance;
         payable(owner).transfer(address(this).balance);
-        emit ToLog("Operator refunded");
+        emit ChangeBack("Operator refunded",balance);
     } 
 
     /**
@@ -299,5 +305,9 @@ contract Try {
 
     function getTicketsFromAddress(address addr) public view returns(Ticket[] memory){
         return players[addr].tickets;
+    }
+
+    function getWonNFTsFromAddress(address addr) public view returns(string[] memory){
+        return nft.getNFTsFromAddress(addr);
     }
 }
